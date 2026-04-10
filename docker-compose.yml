@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  glass-monitor:
+    build: .
+    container_name: glass-system-monitor
+    restart: unless-stopped
+    privileged: true
+    network_mode: host
+    environment:
+      - DISPLAY=${DISPLAY}
+      - XAUTHORITY=/tmp/.docker.xauth
+      - ELECTRON_ENABLE_SECURITY_WARNINGS=false
+      - ELECTRON_DISABLE_SANDBOX=1
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - /tmp/.docker.xauth:/tmp/.docker.xauth:rw
+      - /dev:/dev:ro
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /etc/os-release:/etc/os-release:ro
+      - ./logs:/app/logs
+    mem_limit: 512m
+    cpus: 0.5
+    devices:
+      - /dev/dri:/dev/dri
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"

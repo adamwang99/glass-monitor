@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Glass System Monitor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 15px;
+            overflow: hidden;
+            color: white;
+            user-select: none;
+            cursor: default;
+            transition: all 0.3s ease;
+            height: 100vh;
+        }
+
+        body:hover {
+            background: rgba(255, 255, 255, 0.12);
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        /* Glow effect on hover */
+        body::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+
+        body:hover::before {
+            opacity: 1;
+        }
+
+        .container {
+            padding: 16px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .title {
+            font-size: 13px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4CAF50;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.1); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        .controls {
+            display: flex;
+            gap: 4px;
+        }
+
+        .control-btn {
+            width: 14px;
+            height: 14px;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .control-btn:hover {
+            transform: scale(1.2);
+        }
+
+        .minimize { background: #FF9500; color: white; }
+        .close { background: #FF3B30; color: white; }
+
+        .stats-grid {
+            display: grid;
+            gap: 12px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 12px;
+            border-left: 4px solid;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transform: translateX(-100%);
+            transition: transform 0.6s ease;
+        }
+
+        .stat-card:hover::before {
+            transform: translateX(100%);
+        }
+
+        .stat-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            opacity: 0.7;
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-size: 16px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .stat-details {
+            font-size: 10px;
+            opacity: 0.8;
+            margin-top: 6px;
+            font-weight: 400;
+        }
+
+        .progress-bar {
+            margin-top: 8px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 2px;
+            transition: all 0.5s ease;
+            position: relative;
+        }
+
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .n8n-status {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 12px;
+            text-align: center;
+            font-size: 11px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: 1px solid transparent;
+        }
+
+        .n8n-running {
+            background: rgba(255, 107, 53, 0.15);
+            border-color: rgba(255, 107, 53, 0.4);
+            color: #FF6B35;
+        }
+
+        .n8n-idle {
+            background: rgba(76, 175, 80, 0.15);
+            border-color: rgba(76, 175, 80, 0.4);
+            color: #4CAF50;
+        }
+
+        .timestamp {
+            text-align: center;
+            font-size: 9px;
+            opacity: 0.5;
+            margin-top: 8px;
+            letter-spacing: 0.5px;
+        }
+
+        /* Color coding based on usage */
+        .stat-card.low-usage {
+            border-left-color: #4CAF50;
+        }
+
+        .stat-card.low-usage .progress-fill {
+            background: linear-gradient(90deg, #4CAF50, #66BB6A);
+        }
+
+        .stat-card.medium-usage {
+            border-left-color: #FF9800;
+        }
+
+        .stat-card.medium-usage .progress-fill {
+            background: linear-gradient(90deg, #FF9800, #FFB74D);
+        }
+
+        .stat-card.high-usage {
+            border-left-color: #F44336;
+        }
+
+        .stat-card.high-usage .progress-fill {
+            background: linear-gradient(90deg, #F44336, #EF5350);
+            animation: alert-pulse 1s infinite;
+        }
+
+        @keyframes alert-pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+
+        .temp-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .temp-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            padding: 8px;
+            font-size: 9px;
+        }
+
+        .temp-label {
+            opacity: 0.7;
+            margin-bottom: 2px;
+        }
+
+        .temp-value {
+            font-weight: 600;
+        }
+
+        .disk-temps {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .disk-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 9px;
+            margin-bottom: 4px;
+        }
+
+        .disk-name {
+            opacity: 0.7;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* Glow effect for high values */
+        .glow-red {
+            text-shadow: 0 0 10px rgba(244, 67, 54, 0.8), 0 0 20px rgba(244, 67, 54, 0.6);
+        }
+
+        .glow-orange {
+            text-shadow: 0 0 10px rgba(255, 152, 0, 0.8), 0 0 20px rgba(255, 152, 0, 0.6);
+        }
+
+        .glow-green {
+            text-shadow: 0 0 10px rgba(76, 175, 80, 0.8), 0 0 20px rgba(76, 175, 80, 0.6);
+        }
+
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 200px;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 12px;
+        }
+
+        .spinner {
+            width: 24px;
+            height: 24px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 12px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Loading State -->
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <div>Initializing Glass Monitor...</div>
+        </div>
+
+        <!-- Main Content -->
+        <div id="content" class="hidden">
+            <div class="header">
+                <div class="title">
+                    <div class="status-indicator"></div>
+                    Glass System Monitor
+                </div>
+                <div class="controls">
+                    <button class="control-btn minimize" onclick="minimizeWindow()" title="Minimize">−</button>
+                    <button class="control-btn close" onclick="closeWindow()" title="Close">×</button>
+                </div>
+            </div>
+
+            <div class="stats-grid">
+                <!-- RAM Card -->
+                <div class="stat-card" id="ram-card">
+                    <div class="stat-label">Memory Usage</div>
+                    <div class="stat-value">
+                        <span id="ram-main">--</span>
+                        <span id="ram-percent" class="stat-details">--%</span>
+                    </div>
+                    <div class="stat-details" id="ram-details">-- / -- GB</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="ram-progress"></div>
+                    </div>
+                </div>
+
+                <!-- CPU Card -->
+                <div class="stat-card" id="cpu-card">
+                    <div class="stat-label">CPU Usage</div>
+                    <div class="stat-value">
+                        <span id="cpu-main">--</span>
+                        <span id="cpu-cores" class="stat-details">-- cores</span>
+                    </div>
+                    <div class="stat-details" id="cpu-details">@ -- MHz</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="cpu-progress"></div>
+                    </div>
+                    
+                    <!-- CPU Temperatures -->
+                    <div class="temp-grid hidden" id="cpu-temps">
+                        <div class="temp-item">
+                            <div class="temp-label">CPU Package</div>
+                            <div class="temp-value" id="cpu-package-temp">--°C</div>
+                        </div>
+                        <div class="temp-item">
+                            <div class="temp-label">Core Max</div>
+                            <div class="temp-value" id="cpu-core-max">--°C</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- System Temperatures -->
+                <div class="stat-card" id="system-card">
+                    <div class="stat-label">System Temperatures</div>
+                    <div class="temp-grid">
+                        <div class="temp-item">
+                            <div class="temp-label">CPU</div>
+                            <div class="temp-value" id="system-cpu-temp">--°C</div>
+                        </div>
+                        <div class="temp-item">
+                            <div class="temp-label">Motherboard</div>
+                            <div class="temp-value" id="system-mobo-temp">--°C</div>
+                        </div>
+                    </div>
+                    
+                    <div class="disk-temps hidden" id="disk-temps">
+                        <div class="stat-label" style="margin-bottom: 6px; font-size: 9px;">Storage</div>
+                        <div id="disk-list"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- n8n Status -->
+            <div class="n8n-status" id="n8n-status">
+                <div id="n8n-text">🔄 Checking n8n status...</div>
+            </div>
+
+            <div class="timestamp" id="timestamp">--:--:--</div>
+        </div>
+    </div>
+
+    <script>
+        const { ipcRenderer } = require('electron');
+        
+        // State
+        let stats = null;
+        let n8nStatus = { healthy: false, running: 0 };
+
+        // Color thresholds
+        const THRESHOLDS = {
+            low: { max: 40, color: 'low-usage' },
+            medium: { max: 75, color: 'medium-usage' },
+            high: { max: 100, color: 'high-usage' }
+        };
+
+        function getUsageClass(percent) {
+            if (percent <= THRESHOLDS.low.max) return THRESHOLDS.low.color;
+            if (percent <= THRESHOLDS.medium.max) return THRESHOLDS.medium.color;
+            return THRESHOLDS.high.color;
+        }
+
+        function applyGlow(element, percent) {
+            element.classList.remove('glow-red', 'glow-orange', 'glow-green');
+            if (percent >= 85) element.classList.add('glow-red');
+            else if (percent >= 60) element.classList.add('glow-orange');
+            else element.classList.add('glow-green');
+        }
+
+        function updateRAMStats(data) {
+            const { used, total, free, usage } = data.memory;
+            const card = document.getElementById('ram-card');
+            const percentElement = document.getElementById('ram-percent');
+            
+            document.getElementById('ram-main').textContent = `${used.toFixed(1)} GB`;
+            document.getElementById('ram-details').textContent = `${used.toFixed(1)} / ${total.toFixed(1)} GB (Free: ${free.toFixed(1)} GB)`;
+            document.getElementById('ram-progress').style.width = `${usage}%`;
+            
+            // Apply color coding and glow
+            card.className = `stat-card ${getUsageClass(usage)}`;
+            applyGlow(percentElement, usage);
+            percentElement.textContent = `${usage}%`;
+        }
+
+        function updateCPUStats(data) {
+            const { cpu, currentLoad } = data;
+            const usage = Math.round(currentLoad.currentLoad || 0);
+            const card = document.getElementById('cpu-card');
+            const cpuElement = document.getElementById('cpu-main');
+            
+            document.getElementById('cpu-main').textContent = `${usage}%`;
+            document.getElementById('cpu-cores').textContent = `${cpu.cores} cores`;
+            document.getElementById('cpu-details').textContent = `@ ${cpu.speed || 0} MHz`;
+            document.getElementById('cpu-progress').style.width = `${usage}%`;
+            
+            // Apply color coding and glow
+            card.className = `stat-card ${getUsageClass(usage)}`;
+            applyGlow(cpuElement, usage);
+            
+            // Update CPU temperatures
+            if (data.temperature && data.temperature.main) {
+                document.getElementById('cpu-package-temp').textContent = `${Math.round(data.temperature.main)}°C`;
+                document.getElementById('cpu-core-max').textContent = `${Math.round(data.temperature.max || data.temperature.main)}°C`;
+                document.getElementById('cpu-temps').classList.remove('hidden');
+            }
+        }
+
+        function updateSystemStats(data) {
+            // Update system temps
+            if (data.temperature && data.temperature.main) {
+                document.getElementById('system-cpu-temp').textContent = `${Math.round(data.temperature.main)}°C`;
+            }
+            
+            // Update disk temperatures
+            if (data.disk && data.disk.length > 0) {
+                const diskList = document.getElementById('disk-list');
+                diskList.innerHTML = '';
+                
+                data.disk.forEach(disk => {
+                    const diskItem = document.createElement('div');
+                    diskItem.className = 'disk-item';
+                    diskItem.innerHTML = `
+                        <span class="disk-name">${disk.name || disk.device}</span>
+                        <span class="temp-value">${disk.temperature || 'N/A'}°C</span>
+                    `;
+                    diskList.appendChild(diskItem);
+                });
+                
+                document.getElementById('disk-temps').classList.remove('hidden');
+            }
+        }
+
+        function updateN8NStatus() {
+            const statusElement = document.getElementById('n8n-status');
+            const textElement = document.getElementById('n8n-text');
+            
+            if (n8nStatus.healthy) {
+                if (n8nStatus.running > 0) {
+                    statusElement.className = 'n8n-status n8n-running';
+                    textElement.textContent = `⚡ ${n8nStatus.running} workflow(s) running`;
+                } else {
+                    statusElement.className = 'n8n-status n8n-idle';
+                    textElement.textContent = '✅ n8n idle';
+                }
+            } else {
+                statusElement.className = 'n8n-status';
+                statusElement.style.background = 'rgba(244, 67, 54, 0.15)';
+                statusElement.style.borderColor = 'rgba(244, 67, 54, 0.4)';
+                statusElement.style.color = '#F44336';
+                textElement.textContent = '❌ n8n unavailable';
+            }
+        }
+
+        function updateStats(data) {
+            if (!data.system) return;
+            
+            stats = data.system;
+            n8nStatus = data.n8n || n8nStatus;
+            
+            updateRAMStats(stats);
+            updateCPUStats(stats);
+            updateSystemStats(stats);
+            updateN8NStatus();
+            
+            // Update timestamp
+            document.getElementById('timestamp').textContent = new Date().toLocaleTimeString();
+        }
+
+        // Initialize
+        window.addEventListener('DOMContentLoaded', async () => {
+            try {
+                // Get initial stats
+                const stats = await ipcRenderer.invoke('get-system-stats');
+                const n8nStatus = await ipcRenderer.invoke('get-n8n-status');
+                
+                updateStats({ system: stats, n8n: n8nStatus });
+                
+                // Hide loading, show content
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('content').classList.remove('hidden');
+                
+                // Listen for updates
+                ipcRenderer.on('system-stats', (event, data) => {
+                    updateStats(data);
+                });
+                
+            } catch (error) {
+                console.error('Error initializing monitor:', error);
+            }
+        });
+
+        // IPC handlers
+        function minimizeWindow() {
+            ipcRenderer.invoke('minimize-window');
+        }
+
+        function closeWindow() {
+            ipcRenderer.invoke('close-window');
+        }
+
+        // Keyboard shortcuts
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                minimizeWindow();
+            }
+        });
+    </script>
+</body>
+</html>

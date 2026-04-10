@@ -1,0 +1,90 @@
+{
+  "name": "glass-monitor",
+  "version": "1.0.0",
+  "description": "Glass Monitor - Beautiful transparent system monitor for your desktop",
+  "main": "app/main.js",
+  "author": "Adam Wang <adamwang99@github.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/adamwang99/glass-monitor.git"
+  },
+  "scripts": {
+    "start": "electron app/main.js",
+    "build": "electron-builder",
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac",
+    "build:linux": "electron-builder --linux",
+    "build:all": "electron-builder -mwl"
+  },
+  "dependencies": {
+    "@electron/remote": "^2.1.3",
+    "axios": "^1.15.0",
+    "systeminformation": "^5.21.0"
+  },
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.adamwang.glass-monitor",
+    "productName": "Glass Monitor",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "app/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.utilities",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "icon": "app/logo.jpg"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "icon": "app/logo.jpg"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb",
+        "rpm",
+        "tar.gz"
+      ],
+      "category": "Utility",
+      "icon": "app/logo.jpg"
+    }
+  }
+}

@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        body { background: transparent; overflow: hidden; }
+
+        .monitor {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            height: 100%;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .drag { position: absolute; top: 0; left: 0; right: 0; bottom: 0; cursor: move; z-index: 1; }
+
+        .header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 6px 10px; background: rgba(255, 255, 255, 0.1); border-radius: 14px 14px 0 0;
+            position: relative;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        .title { font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.9); letter-spacing: 0.5px; text-shadow: 0 1px 2px rgba(0,0,0,0.3); }
+
+        .controls { display: flex; gap: 4px; pointer-events: auto; }
+        .btn { width: 16px; height: 16px; border: none; border-radius: 50%; cursor: pointer; font-size: 10px; font-weight: bold; color: white; transition: transform 0.2s; background: rgba(220, 53, 69, 0.8); }
+        .btn:hover { transform: scale(1.15); background: rgba(220, 53, 69, 1); }
+
+        .content { padding: 10px; position: relative; z-index: 2; pointer-events: none; }
+
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; pointer-events: auto; }
+
+        .card {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            padding: 10px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .card-label { font-size: 9px; font-weight: 700; color: rgba(255, 255, 255, 0.9); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; text-shadow: 0 1px 2px rgba(0,0,0,0.3); }
+        .card-value { font-size: 18px; font-weight: 800; color: #ffffff; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+        .card-sub { font-size: 9px; color: rgba(255, 255, 255, 0.8); margin-top: 2px; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+
+        .row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; pointer-events: auto; }
+
+        .mini {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 6px 4px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .mini-label { font-size: 7px; font-weight: 700; color: rgba(255, 255, 255, 0.9); text-shadow: 0 1px 2px rgba(0,0,0,0.3); }
+        .mini-value { font-size: 10px; font-weight: 700; color: #ffffff; margin-top: 2px; text-shadow: 0 1px 2px rgba(0,0,0,0.3); }
+
+        .loading { text-align: center; padding: 30px; color: rgba(255, 255, 255, 0.9); font-size: 11px; text-shadow: 0 1px 2px rgba(0,0,0,0.3); }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="monitor">
+        <div class="drag"></div>
+
+        <div id="loading" class="loading">Loading...</div>
+
+        <div id="content" class="content hidden">
+            <div class="header">
+                <div class="title">🔮 Glass Monitor v1.0.0</div>
+                <div class="controls">
+                    <button class="btn" onclick="closeWindow()">×</button>
+                </div>
+            </div>
+
+            <div class="grid">
+                <div class="card">
+                    <div class="card-label">CPU</div>
+                    <div class="card-value" id="cpu-val">--</div>
+                    <div class="card-sub" id="cpu-temp">--°C</div>
+                </div>
+                <div class="card">
+                    <div class="card-label">RAM</div>
+                    <div class="card-value" id="ram-val">--</div>
+                    <div class="card-sub" id="ram-gb">-- GB</div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="mini">
+                    <div class="mini-label">CORE MAX</div>
+                    <div class="mini-value" id="core-max">--°C</div>
+                </div>
+                <div class="mini">
+                    <div class="mini-label">PKG</div>
+                    <div class="mini-value" id="pkg-temp">--°C</div>
+                </div>
+                <div class="mini">
+                    <div class="mini-label">ACPI</div>
+                    <div class="mini-value" id="acpi-temp">--°C</div>
+                </div>
+                <div class="mini">
+                    <div class="mini-label">n8n</div>
+                    <div class="mini-value" id="n8n-val">--</div>
+                </div>
+            </div>
+
+            <div class="row" id="disks-row" style="display: none; margin-top: 8px;">
+            </div>
+
+            <div class="row" id="fans-row" style="display: none; margin-top: 8px;">
+            </div>
+
+            <div class="row" id="gpu-row" style="display: none; margin-top: 8px;">
+                <div class="mini">
+                    <div class="mini-label">GPU TEMP</div>
+                    <div class="mini-value" id="gpu-temp">--°C</div>
+                </div>
+                <div class="mini">
+                    <div class="mini-label">GPU FAN</div>
+                    <div class="mini-value" id="gpu-fan">-- RPM</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { ipcRenderer } = require('electron');
+        const remote = require('@electron/remote');
+        const win = remote.getCurrentWindow();
+        
+        let isDragging = false;
+        const dragArea = document.querySelector('.drag');
+
+        dragArea.onmousedown = e => {
+            isDragging = true;
+            const winPos = win.getPosition();
+            const startX = e.screenX - winPos[0];
+            const startY = e.screenY - winPos[1];
+            
+            const onMove = (moveEvent) => {
+                if (isDragging) {
+                    win.setPosition(
+                        moveEvent.screenX - startX,
+                        moveEvent.screenY - startY
+                    );
+                }
+            };
+            
+            const onUp = () => {
+                isDragging = false;
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup', onUp);
+            };
+            
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+        };
+
+        function getColor(v) {
+            if (v >= 75) return '#dc3545';
+            if (v >= 40) return '#fd7e14';
+            return '#212529';
+        }
+
+        function update(data) {
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('content').classList.remove('hidden');
+
+            const { system, n8n } = data;
+            if (!system) return;
+
+            const cpuEl = document.getElementById('cpu-val');
+            cpuEl.textContent = system.cpu.percent + '%';
+            cpuEl.style.color = getColor(system.cpu.percent);
+            document.getElementById('cpu-temp').textContent = (system.cpu.temp || '--') + '°C';
+
+            const ramEl = document.getElementById('ram-val');
+            ramEl.textContent = system.ram.percent + '%';
+            ramEl.style.color = getColor(system.ram.percent);
+            document.getElementById('ram-gb').textContent = system.ram.used + ' GB';
+
+            document.getElementById('core-max').textContent = (system.cpu.coreMax || '--') + '°C';
+            document.getElementById('pkg-temp').textContent = (system.cpu.temp || '--') + '°C';
+            document.getElementById('acpi-temp').textContent = system.motherboard !== 'N/A' ? system.motherboard + '°C' : '--';
+
+            const n8nEl = document.getElementById('n8n-val');
+            if (n8n?.healthy) {
+                n8nEl.textContent = n8n.running > 0 ? n8n.running : '✓';
+                n8nEl.style.color = n8n.running > 0 ? '#fd7e14' : '#28a745';
+            } else {
+                n8nEl.textContent = '✗';
+                n8nEl.style.color = '#dc3545';
+            }
+
+            // Update disks
+            if (system.disks && system.disks.length > 0) {
+                const disksRow = document.getElementById('disks-row');
+                disksRow.style.display = 'grid';
+                disksRow.innerHTML = '';
+                system.disks.forEach(disk => {
+                    const mini = document.createElement('div');
+                    mini.className = 'mini';
+                    mini.innerHTML = `
+                        <div class="mini-label">${disk.name.substring(0, 8)}</div>
+                        <div class="mini-value">${disk.temp}°C</div>
+                    `;
+                    disksRow.appendChild(mini);
+                });
+            }
+
+            // Update fans
+            if (system.fans && system.fans.length > 0) {
+                const fansRow = document.getElementById('fans-row');
+                fansRow.style.display = 'grid';
+                fansRow.innerHTML = '';
+                system.fans.forEach(fan => {
+                    const mini = document.createElement('div');
+                    mini.className = 'mini';
+                    mini.innerHTML = `
+                        <div class="mini-label">${fan.label.substring(0, 8)}</div>
+                        <div class="mini-value">${fan.rpm}</div>
+                    `;
+                    fansRow.appendChild(mini);
+                });
+            }
+
+            // Update GPU
+            if (system.gpu && system.gpu.temp !== 'N/A') {
+                document.getElementById('gpu-row').style.display = 'grid';
+                document.getElementById('gpu-temp').textContent = system.gpu.temp + '°C';
+                document.getElementById('gpu-fan').textContent = system.gpu.fan !== 'N/A' ? system.gpu.fan : '--';
+            }
+        }
+
+        ipcRenderer.on('stats', (e, data) => update(data));
+
+        function closeWindow() { ipcRenderer.send('close'); }
+    </script>
+</body>
+</html>
