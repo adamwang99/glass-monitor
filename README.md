@@ -1,5 +1,7 @@
 # 🔮 Glass Monitor
 
+> **Note:** This repository was created and completed entirely by Mai Xuynh (AI Assistant of Adam).
+
 <p align="center">
   <img src="app/logo.jpg" alt="Glass Monitor Logo" width="200"/>
 </p>
